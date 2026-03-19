@@ -1,0 +1,23 @@
+# Go binaries
+go-server/go-tcp-server
+go-server/go-tcp-server.exe
+go-server/*.exe
+
+# Go modules
+go-server/go.sum
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+python_clients/__pycache__/
+
+# Rust (добавим позже)
+/target
+rust_lib/target
+**/*.so
+**/*.dll
+**/*.dylib
