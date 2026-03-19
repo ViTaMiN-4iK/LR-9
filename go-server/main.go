@@ -17,7 +17,7 @@ func main() {
 	defer listener.Close()
 
 	fmt.Println("✅ Server is listening on :8080")
-	fmt.Println("🔄 Server will handle multiple connections sequentially")
+	fmt.Println("🔄 Server will handle multiple connections CONCURRENTLY with goroutines")
 
 	// Бесконечный цикл для обработки соединений
 	for {
@@ -28,16 +28,17 @@ func main() {
 			continue // Продолжаем слушать дальше, даже если была ошибка
 		}
 
-		// Обрабатываем соединение в той же горутине (последовательно)
-		handleConnection(conn)
+		// ЗАПУСКАЕМ КАЖДОЕ СОЕДИНЕНИЕ В ОТДЕЛЬНОЙ ГОРУТИНЕ!
+		go handleConnection(conn)
 	}
 }
 
 // handleConnection обрабатывает одно клиентское соединение
+// Теперь эта функция будет вызываться в горутинах
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	fmt.Printf("✅ Accepted connection from %s\n", conn.RemoteAddr())
+	fmt.Printf("✅ Accepted connection from %s (goroutine started)\n", conn.RemoteAddr())
 
 	// Читаем данные от клиента
 	buffer := make([]byte, 1024)
