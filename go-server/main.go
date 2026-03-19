@@ -32,32 +32,3 @@ func main() {
 		go handleConnection(conn)
 	}
 }
-
-// handleConnection обрабатывает одно клиентское соединение
-// Теперь эта функция будет вызываться в горутинах
-func handleConnection(conn net.Conn) {
-	defer conn.Close()
-
-	fmt.Printf("✅ Accepted connection from %s (goroutine started)\n", conn.RemoteAddr())
-
-	// Читаем данные от клиента
-	buffer := make([]byte, 1024)
-	n, err := conn.Read(buffer)
-	if err != nil {
-		fmt.Printf("❌ Error reading from %s: %v\n", conn.RemoteAddr(), err)
-		return
-	}
-
-	message := CleanMessage(buffer[:n])
-	fmt.Printf("📩 Received from %s: %q\n", conn.RemoteAddr(), message)
-
-	// Формируем и отправляем ответ
-	response := ProcessMessage(message)
-	_, err = conn.Write([]byte(response + "\n"))
-	if err != nil {
-		fmt.Printf("❌ Error writing to %s: %v\n", conn.RemoteAddr(), err)
-		return
-	}
-
-	fmt.Printf("📤 Sent to %s: %q\n", conn.RemoteAddr(), response)
-}
