@@ -1,0 +1,44 @@
+name: Test Rust Module
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'rust_lib/**'
+      - 'tests/**'
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        
+    - name: Install maturin
+      run: pip install maturin pytest
+        
+    - name: Build and install Rust module
+      run: |
+        cd rust_lib
+        maturin develop
+        
+    - name: Run Python tests
+      run: |
+        pip install pytest
+        pytest tests/test_rust_module.py -v

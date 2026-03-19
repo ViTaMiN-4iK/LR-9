@@ -1,0 +1,60 @@
+name: Build and Publish Rust Module to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'          # Запускается при пуше тегов вида v1.0.0, v0.2.1 и т.д.
+  workflow_dispatch:  # Возможность запустить вручную из интерфейса GitHub
+
+jobs:
+  build-and-publish:
+    name: Build and publish to PyPI
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        
+    - name: Install maturin
+      run: |
+        pip install maturin
+        pip install twine  # для проверки пакета
+        
+    - name: Build wheels
+      run: |
+        cd rust_lib
+        maturin build --release --out dist
+        
+    - name: Test the wheel (optional)
+      run: |
+        cd rust_lib
+        pip install dist/*.whl
+        python -c "from rust_lib import Analyzer; a = Analyzer(2.5); assert a.get_multiplier() == 2.5; print('✅ Test passed')"
+        
+    - name: Publish to Test PyPI (for testing)
+      if: github.event_name == 'workflow_dispatch'  # только при ручном запуске
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+      run: |
+        cd rust_lib
+        twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+        
+    - name: Publish to PyPI
+      if: startsWith(github.ref, 'refs/tags/v')  # только для тегов v*
+      env:
+        MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      run: |
+        cd rust_lib
+        maturin publish
