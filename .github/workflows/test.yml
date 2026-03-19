@@ -16,6 +16,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+      fail-fast: false
         
     steps:
     - uses: actions/checkout@v3
@@ -30,15 +31,19 @@ jobs:
       with:
         toolchain: stable
         
-    - name: Install maturin
-      run: pip install maturin pytest
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install maturin pytest
         
     - name: Build and install Rust module
       run: |
         cd rust_lib
-        maturin develop
+        # Явно указываем интерпретатор Python
+        maturin develop --release --strip --interpreter python
         
     - name: Run Python tests
       run: |
-        pip install pytest
-        pytest tests/test_rust_module.py -v
+        # Убедимся, что модуль виден
+        python -c "import rust_lib; print('✅ Rust module loaded')"
+        pytest tests/ -v --tb=short
