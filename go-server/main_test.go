@@ -3,40 +3,39 @@ package main
 import (
 	"os"
 	"testing"
+	"time"
 )
 
-// TestMainExists проверяет, что функция main объявлена
-// Это базовый тест, который гарантирует, что пакет компилируется
-func TestMainExists(t *testing.T) {
-	// Просто проверяем, что main функция существует
-	// Если бы main не было, тест бы даже не скомпилировался
-	t.Log("✅ Пакет main успешно компилируется")
-}
-
-// TestMainOutput проверяет, что main выводит ожидаемое сообщение
-// Но мы не можем легко перехватить вывод main(), поэтому
-// пока просто проверяем, что main не паникует
 func TestMainDoesNotPanic(t *testing.T) {
-	// Сохраняем оригинальный stdout
-	oldStdout := os.Stdout
+	// Запускаем main в горутине, так как он теперь блокирующий
+	done := make(chan bool)
 
-	// Временный файл для перехвата вывода
-	_, w, _ := os.Pipe()
-	os.Stdout = w
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("main panicked: %v", r)
+			}
+			done <- true
+		}()
 
-	// Функция для восстановления stdout
-	defer func() {
+		// Временно перенаправляем stdout, чтобы не захламлять вывод тестов
+		oldStdout := os.Stdout
+		_, w, _ := os.Pipe()
+		os.Stdout = w
+
+		main()
+
 		w.Close()
 		os.Stdout = oldStdout
 	}()
 
-	// Проверяем, что main не паникует
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("main panicked: %v", r)
-		}
-	}()
-
-	// Запускаем main
-	main()
+	// Даем main время запуститься, но не ждем соединения
+	// Через 100мс закрываем тест (main все еще висит на Accept)
+	select {
+	case <-done:
+		// main завершился сам (например, с ошибкой)
+	case <-time.After(100 * time.Millisecond):
+		// main все еще работает на Accept - это нормально для данного теста
+		t.Log("main is running and waiting for connections")
+	}
 }
