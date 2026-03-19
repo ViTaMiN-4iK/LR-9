@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"strings"
 )
 
 func main() {
@@ -18,13 +17,24 @@ func main() {
 	defer listener.Close()
 
 	fmt.Println("✅ Server is listening on :8080")
+	fmt.Println("🔄 Server will handle multiple connections sequentially")
 
-	// Принимаем одно соединение
-	conn, err := listener.Accept()
-	if err != nil {
-		fmt.Printf("❌ Error accepting connection: %v\n", err)
-		return
+	// Бесконечный цикл для обработки соединений
+	for {
+		// Принимаем соединение
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Printf("❌ Error accepting connection: %v\n", err)
+			continue // Продолжаем слушать дальше, даже если была ошибка
+		}
+
+		// Обрабатываем соединение в той же горутине (последовательно)
+		handleConnection(conn)
 	}
+}
+
+// handleConnection обрабатывает одно клиентское соединение
+func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	fmt.Printf("✅ Accepted connection from %s\n", conn.RemoteAddr())
@@ -33,21 +43,20 @@ func main() {
 	buffer := make([]byte, 1024)
 	n, err := conn.Read(buffer)
 	if err != nil {
-		fmt.Printf("❌ Error reading: %v\n", err)
+		fmt.Printf("❌ Error reading from %s: %v\n", conn.RemoteAddr(), err)
 		return
 	}
 
-	message := strings.TrimSpace(string(buffer[:n]))
-	fmt.Printf("📩 Received: %q\n", message)
+	message := CleanMessage(buffer[:n])
+	fmt.Printf("📩 Received from %s: %q\n", conn.RemoteAddr(), message)
 
 	// Формируем и отправляем ответ
-	response := "Hello from Go"
+	response := ProcessMessage(message)
 	_, err = conn.Write([]byte(response + "\n"))
 	if err != nil {
-		fmt.Printf("❌ Error writing: %v\n", err)
+		fmt.Printf("❌ Error writing to %s: %v\n", conn.RemoteAddr(), err)
 		return
 	}
 
-	fmt.Printf("📤 Sent: %q\n", response)
-	fmt.Println("👋 Connection closed, server shutting down...")
+	fmt.Printf("📤 Sent to %s: %q\n", conn.RemoteAddr(), response)
 }

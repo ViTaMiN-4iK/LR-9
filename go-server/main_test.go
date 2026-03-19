@@ -7,7 +7,7 @@ import (
 )
 
 func TestMainDoesNotPanic(t *testing.T) {
-	// Запускаем main в горутине, так как он теперь блокирующий
+	// Запускаем main в горутине, так как он теперь бесконечный
 	done := make(chan bool)
 
 	go func() {
@@ -18,7 +18,7 @@ func TestMainDoesNotPanic(t *testing.T) {
 			done <- true
 		}()
 
-		// Временно перенаправляем stdout, чтобы не захламлять вывод тестов
+		// Временно перенаправляем stdout
 		oldStdout := os.Stdout
 		_, w, _ := os.Pipe()
 		os.Stdout = w
@@ -29,13 +29,15 @@ func TestMainDoesNotPanic(t *testing.T) {
 		os.Stdout = oldStdout
 	}()
 
-	// Даем main время запуститься, но не ждем соединения
-	// Через 100мс закрываем тест (main все еще висит на Accept)
+	// Даем main время запуститься
+	time.Sleep(500 * time.Millisecond)
+
+	// Проверяем, что main все еще работает (не завершился)
 	select {
 	case <-done:
-		// main завершился сам (например, с ошибкой)
+		t.Error("main terminated unexpectedly")
 	case <-time.After(100 * time.Millisecond):
-		// main все еще работает на Accept - это нормально для данного теста
+		// main все еще работает - это хорошо!
 		t.Log("main is running and waiting for connections")
 	}
 }

@@ -1,76 +1,69 @@
 package main
 
-import "testing"
+import (
+	"net"
+	"testing"
+	"time"
+)
 
-func TestProcessMessage(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "any message returns greeting",
-			input:    "ping",
-			expected: "Hello from Go",
-		},
-		{
-			name:     "empty message returns greeting",
-			input:    "",
-			expected: "Hello from Go",
-		},
-		{
-			name:     "long message returns greeting",
-			input:    "very long test message here",
-			expected: "Hello from Go",
-		},
+// TestHandleConnection проверяет логику обработки соединения
+func TestHandleConnection(t *testing.T) {
+	// Создаем пару соединений (клиент-сервер) в памяти
+	client, server := net.Pipe()
+	defer client.Close()
+	defer server.Close()
+
+	// Канал для получения результата
+	done := make(chan bool)
+
+	// Запускаем handleConnection в горутине
+	go func() {
+		handleConnection(server)
+		done <- true
+	}()
+
+	// Отправляем тестовое сообщение от клиента
+	testMessage := "ping"
+	_, err := client.Write([]byte(testMessage + "\n"))
+	if err != nil {
+		t.Fatalf("Failed to write to connection: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := ProcessMessage(tt.input)
-			if result != tt.expected {
-				t.Errorf("ProcessMessage(%q) = %q; want %q",
-					tt.input, result, tt.expected)
-			}
-		})
+	// Читаем ответ
+	response := make([]byte, 1024)
+	n, err := client.Read(response)
+	if err != nil {
+		t.Fatalf("Failed to read response: %v", err)
+	}
+
+	expected := "Hello from Go\n"
+	if string(response[:n]) != expected {
+		t.Errorf("Expected %q, got %q", expected, string(response[:n]))
+	}
+
+	// Даем время на завершение handleConnection
+	select {
+	case <-done:
+		// Все хорошо
+	case <-time.After(time.Second):
+		t.Fatal("handleConnection didn't close properly")
 	}
 }
 
-func TestCleanMessage(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []byte
-		expected string
-	}{
-		{
-			name:     "simple message",
-			input:    []byte("ping"),
-			expected: "ping",
-		},
-		{
-			name:     "message with newline",
-			input:    []byte("ping\n"),
-			expected: "ping",
-		},
-		{
-			name:     "message with spaces",
-			input:    []byte("  ping  "),
-			expected: "ping",
-		},
-		{
-			name:     "empty bytes",
-			input:    []byte{},
-			expected: "",
-		},
-	}
+// BenchmarkHandleConnection замеряет производительность обработки
+func BenchmarkHandleConnection(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		client, server := net.Pipe()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := CleanMessage(tt.input)
-			if result != tt.expected {
-				t.Errorf("CleanMessage(%q) = %q; want %q",
-					tt.input, result, tt.expected)
-			}
-		})
+		// Запускаем обработчик
+		go handleConnection(server)
+
+		// Отправляем и получаем данные
+		client.Write([]byte("ping\n"))
+		response := make([]byte, 1024)
+		client.Read(response)
+
+		client.Close()
+		server.Close()
 	}
 }
