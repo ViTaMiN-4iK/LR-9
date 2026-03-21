@@ -50,8 +50,8 @@ func handleConnection(conn net.Conn) {
 
 	fmt.Printf("✅ Accepted connection from %s (goroutine started)\n", conn.RemoteAddr())
 
-	// Увеличиваем буфер для больших сообщений (10MB)
-	buffer := make([]byte, 10*1024*1024) // 10MB буфер
+	// Увеличиваем буфер для больших сообщений (64KB)
+	buffer := make([]byte, 64*1024) // 64KB буфер
 	n, err := conn.Read(buffer)
 	if err != nil {
 		fmt.Printf("❌ Error reading from %s: %v\n", conn.RemoteAddr(), err)
@@ -81,12 +81,4 @@ func handleConnection(conn net.Conn) {
 		responsePreview = responsePreview[:50] + "..."
 	}
 	fmt.Printf("📤 Sent to %s: %q\n", conn.RemoteAddr(), responsePreview)
-}
-
-// Вспомогательная функция для безопасного логирования
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

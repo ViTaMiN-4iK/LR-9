@@ -12,7 +12,7 @@ categories = ["science", "numerics"]
 
 [lib]
 name = "rust_lib"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 pyo3 = { version = "0.27.2", features = ["extension-module"] }
