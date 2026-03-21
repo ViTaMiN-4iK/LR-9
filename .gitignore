@@ -14,8 +14,9 @@ go-server/go.sum
 __pycache__/
 *.pyc
 python_clients/__pycache__/
+.venv/                              
 
-# Rust (добавим позже)
+# Rust
 /target
 rust_lib/target
 **/*.so
